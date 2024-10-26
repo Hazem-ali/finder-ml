@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_mysqldb import MySQL
 from os import getenv
 import detector
@@ -32,18 +32,26 @@ def get_images_and_ids_from_db() -> tuple:
 def index():
     source_image = request.files["image"].read()
     source_image_encoding = detector.encode_image(source_image)
-    
+
+    if source_image_encoding is None:
+        return -1
+
     data = get_images_and_ids_from_db()
 
-    found_ids = []
+    found_ids = {}
 
-    for id, encoding in data:
-        if not encoding:
+    for id, db_image_encoding in data:
+        if not db_image_encoding:
             continue
-        if detector.is_same_person_optimized(source_image_encoding, json.loads(encoding)):
-            found_ids.append(id)
 
-    return str(found_ids)
+        is_same_person, confidence = detector.is_same_person(
+            source_image_encoding, json.loads(db_image_encoding)
+        )
+
+        if is_same_person:
+            found_ids[id] = float(confidence)
+
+    return jsonify(found_ids)
 
 
 @app.route("/images/encode", methods=["POST"])
@@ -51,8 +59,11 @@ def encode():
     source_image = request.files["image"].read()
 
     encoded_image = detector.encode_image(source_image)
+    if encoded_image is None:
+        encoded_image = ""
 
-    return encoded_image
+    return jsonify(encoded_image)
+
 
 @app.route("/contacts/save", methods=["POST"])
 def save():

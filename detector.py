@@ -3,27 +3,9 @@ import numpy as np
 from io import BytesIO
 
 
-def is_same_person(first_photo, second_photo, threshold=0.6):
-    image1 = face_recognition.load_image_file(BytesIO(first_photo))
-    image2 = face_recognition.load_image_file(BytesIO(second_photo))
-
-    encoding1 = face_recognition.face_encodings(image1)
-    encoding2 = face_recognition.face_encodings(image2)
-    if encoding1 and encoding2:
-        encoding1 = encoding1[0]
-        encoding2 = encoding2[0]
-
-        face_distance = face_recognition.face_distance([encoding1], encoding2)[0]
-        is_same_person = face_distance <= threshold
-        print(f"Same person? {is_same_person} with error_margin {face_distance}")
-        return is_same_person
-    else:
-        print("Could not find faces in one or both images.")
-        return False
 
 
-
-def is_same_person_optimized(
+def is_same_person(
     first_image_encoding: list, second_image_encoding: list, threshold: float = 0.6
 ) -> bool:
     """
@@ -38,11 +20,9 @@ def is_same_person_optimized(
     bool: True if the two encodings are similar enough to represent the same person, False otherwise.
     """
 
-    # print(first_image_encoding)
-    # print(second_image_encoding)
 
     if not first_image_encoding or not second_image_encoding:
-        return False
+        return False, 0
 
 
     if not isinstance(first_image_encoding, list) or not isinstance(second_image_encoding, list):
@@ -52,15 +32,13 @@ def is_same_person_optimized(
     second_image_encoding = np.array(second_image_encoding)
 
 
-
     face_distance = face_recognition.face_distance([first_image_encoding], second_image_encoding)[0]
+    print(face_distance)
     
-    # Determine if they are the same person based on the threshold
     is_same_person = face_distance <= threshold
-
-    print(f"Same person? {is_same_person} with error_margin {face_distance}")
+    confidence = 1 - face_distance
     
-    return is_same_person
+    return is_same_person, confidence
 
 
 def encode_image(image):
@@ -71,4 +49,4 @@ def encode_image(image):
         return encoding[0].tolist()
 
     else:
-        return None
+        return []
